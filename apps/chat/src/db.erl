@@ -92,7 +92,7 @@ handle_call({{get_loged_users, LogedUserPid}, Pid}, _From, Models) ->
     case R of
         false -> {reply, {error, user_is_not_loged}, Models};
         _ ->
-            AllUsers = lists:filter(fun({Name, UserPid}) -> LogedUserPid =/= UserPid end, T),
+            AllUsers = lists:filter(fun({Name, UserPid}) -> LogedUserPid =/= UserPid end, E),
             {reply, {ok, lists:map(fun({Name, _}) -> Name end, AllUsers)}, Models}
     end;
 
