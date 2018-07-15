@@ -187,11 +187,16 @@ pget_loged_users_(Models)->
     lists:map(fun({Name, _}) -> Name end, E).
 
 handle_cast({send_msg, UserPid, ToName, Msg}, Models) ->
-    %% TODO: proper validation
-    {ok, To} = user_name_to_user_pid_(ToName, Models),
-    {ok, UserName} = user_pid_to_user_name_(UserPid, Models),
-    To ! {msg_from_user, Msg, UserName},
-    {noreply, Models};
+    Res = user_name_to_user_pid_(ToName, Models),
+    {ok, SenderName} = user_pid_to_user_name_(UserPid, Models),
+    case Res of
+        {ok, To} ->
+            To ! {msg_from_user, Msg, SenderName},
+            {noreply, Models};
+
+        {error, user_is_not_loged} ->
+            {noreply, Models#models{messages_not_delivered = [ {ToName, SenderName, Msg} | Models#models.messages_not_delivered]}}
+    end;
 
 handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
     T = Models#models.groups,
@@ -214,12 +219,12 @@ handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
 
             T1 = Models#models.messages_not_delivered,
             NewMessages = lists:map(fun(ToName)-> {ToName, GroupName ++ ":" ++ UserName, Msg}  end, InActiveUsers),
-            {noreply, Models#models{messages_not_delivered = T1 ++ NewMessages}};
+            {noreply, Models#models{messages_not_delivered = NewMessages ++ T1 }};
         false -> {noreply, Models}
     end;
 
 handle_cast({notify_loged_user, Name}, Models) ->
-    T = Models#models.messages_not_delivered,
+    T =  lists:reverse(Models#models.messages_not_delivered),
     {Messages, RestMessages} = lists:partition(
                                  fun({To, _, _})-> To =:= Name end, T),
     {ok, To} = user_name_to_user_pid_(Name, Models),

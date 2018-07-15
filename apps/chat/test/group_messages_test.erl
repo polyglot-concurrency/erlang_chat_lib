@@ -59,6 +59,7 @@ send_message_to_group(_) ->
     domain:send_msg_to_group(Pana, "group2", "hello mike"),
     domain:send_msg_to_group(Pana, "group2", "hello again"),
     domain:send_msg_to_group(Pjhon, "group2", "hello"),
+    domain:send_msg(Pjhon, "will", "what's up?"),
 
     {_, Pwill} = domain:login("will", "dddd"),
 
@@ -84,6 +85,7 @@ send_message_to_group(_) ->
                     {"group2:ana", "hello mike"}
                    , {"group2:ana", "hello again"}
                    , {"group2:jhon", "hello"}
+                   , {"jhon", "what's up?"}
                    ], MsgsPwill)
 
     ].
