@@ -28,7 +28,7 @@ loop(State) ->
             loop(NewState);
 
         {get_messages, Sender} ->
-            Sender ! State,
+            Sender ! lists:reverse(State),
             loop([]);
 
         stop ->

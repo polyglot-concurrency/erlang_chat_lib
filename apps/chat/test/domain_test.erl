@@ -55,6 +55,6 @@ send_message_to_user(_) ->
     domain:send_msg(Pana, "mike", "hello again"),
     {ok, Msgs} = domain:get_msgs(Pmike),
     [?_assertEqual([
-                    {"ana", "hello again"},
-                    {"ana", "hello mike"} ], Msgs)].
+                    {"ana", "hello mike"},
+                    {"ana", "hello again"}], Msgs)].
 
