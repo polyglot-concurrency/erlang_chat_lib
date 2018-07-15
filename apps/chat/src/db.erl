@@ -13,7 +13,7 @@
 
 -record(models,
         {users = #{}, current_loged_users = #{},
-         groups = #{}, messages_not_delivered}
+         groups = #{}, messages_not_delivered = []}
        ).
 
 
@@ -44,7 +44,9 @@ add_user_to_group(GroupName, UserName) ->
     gen_server:call(?MODULE, {{add_user_to_group, GroupName, UserName}, self()}).
 
 add_loged_user(Name, UserPid) ->
-    gen_server:call(?MODULE, {{add_loged_user, Name, UserPid}, self()}).
+    R = gen_server:call(?MODULE, {{add_loged_user, Name, UserPid}, self()}),
+    gen_server:cast(?MODULE, {notify_loged_user, Name}),
+    R.
 
 get_loged_users(LogedUserPid) ->
     gen_server:call(?MODULE, {{get_loged_users, LogedUserPid}, self()}).
@@ -81,7 +83,6 @@ send_msg(LogedUserPid, To, Msg) ->
     gen_server:cast(?MODULE, {send_msg, LogedUserPid, To, Msg}).
 
 send_msg_to_group(LogedUserPid, GroupName, Msg) ->
-
     gen_server:cast(?MODULE, {send_msg_to_group, LogedUserPid, GroupName, Msg}).
 
 handle_call({{add_user, Name, Pass}, Pid}, _From, Models) ->
@@ -176,7 +177,6 @@ user_name_to_user_pid_(Name, Models) ->
     Res = maps:get(Name, T, default),
     case Res of
         default ->
-
             {error, user_is_not_loged};
         Key -> {ok, Key}
     end.
@@ -198,9 +198,9 @@ handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
     case maps:is_key(GroupName, T) of
         true ->
 
-            Users = maps:get(GroupName, T),
+            UsersNamesInGroup = maps:get(GroupName, T),
 
-            {ActiveUsers, InActiveUsers} = lists:splitwith(fun(N)-> is_user_loged(N, Models) end, Users),
+            {ActiveUsers, InActiveUsers} = lists:partition(fun(N)-> is_user_loged(N, Models) end, UsersNamesInGroup),
 
             LogedUsersPids = lists:map(fun(UName) ->
                                                {ok, To} = user_name_to_user_pid_(UName, Models),
@@ -210,10 +210,26 @@ handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
             LogedUsersPidsClean = lists:filter(fun (To) -> To =/= UserPid end, LogedUsersPids),
             lists:foreach(fun(To) ->
                                   To ! {msg_from_user, Msg, GroupName ++ ":" ++ UserName}
-                          end, LogedUsersPidsClean);
-        false -> ok
-    end,
-    {noreply, Models};
+                          end, LogedUsersPidsClean),
+
+            T1 = Models#models.messages_not_delivered,
+            NewMessages = lists:map(fun(ToName)-> {ToName, GroupName ++ ":" ++ UserName, Msg}  end, InActiveUsers),
+            {noreply, Models#models{messages_not_delivered = T1 ++ NewMessages}};
+        false -> {noreply, Models}
+    end;
+
+handle_cast({notify_loged_user, Name}, Models) ->
+    T = Models#models.messages_not_delivered,
+    {Messages, RestMessages} = lists:partition(
+                                 fun({To, _, _})-> To =:= Name end, T),
+    {ok, To} = user_name_to_user_pid_(Name, Models),
+
+    lists:foreach(fun({_, From, Msg}) ->
+                          To ! {msg_from_user, Msg, From}
+                  end,
+                  Messages),
+
+    {noreply, Models#models{messages_not_delivered = RestMessages}};
 
 handle_cast(stop, LoopData) ->
     {stop, normal, LoopData}.
