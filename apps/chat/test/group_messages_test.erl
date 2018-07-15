@@ -55,10 +55,20 @@ send_message_to_group(_) ->
     domain:send_msg_to_group(Pjhon, "group2", "hello"),
 
     {ok, Msgs} = domain:get_msgs(Pmike),
+    {ok, MsgsPjhon} = domain:get_msgs(Pjhon),
+    {ok, MsgsPana} = domain:get_msgs(Pana),
 
     [?_assertEqual([
-                    {"group2:ana", "hello mike"},
-                    {"group2:ana", "hello again"},
+                    {"group2:ana", "hello mike"}
+                   , {"group2:ana", "hello again"}
+                   , {"group2:jhon", "hello"}
+                   ], Msgs)
+    ,?_assertEqual([
+                    {"group2:ana", "hello mike"}
+                   , {"group2:ana", "hello again"}
+                   ], MsgsPjhon)
+    ,?_assertEqual([
                     {"group2:jhon", "hello"}
-                   ], Msgs)].
+                   ], MsgsPana)
+    ].
 

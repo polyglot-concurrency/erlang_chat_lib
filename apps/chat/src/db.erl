@@ -202,18 +202,15 @@ handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
 
             {ActiveUsers, InActiveUsers} = lists:splitwith(fun(N)-> is_user_loged(N, Models) end, Users),
 
-            UsersPids = lists:map(fun(UName) ->
-                                          {ok, To} = user_name_to_user_pid_(UName, Models),
-                                          To end, ActiveUsers),
+            LogedUsersPids = lists:map(fun(UName) ->
+                                               {ok, To} = user_name_to_user_pid_(UName, Models),
+                                               To end, ActiveUsers),
 
             {ok, UserName} = user_pid_to_user_name_(UserPid, Models),
-
+            LogedUsersPidsClean = lists:filter(fun (To) -> To =/= UserPid end, LogedUsersPids),
             lists:foreach(fun(To) ->
-
-                                  %% TODO: do not send the message to UserPid
                                   To ! {msg_from_user, Msg, GroupName ++ ":" ++ UserName}
-
-                          end, UsersPids);
+                          end, LogedUsersPidsClean);
         false -> ok
     end,
     {noreply, Models};
