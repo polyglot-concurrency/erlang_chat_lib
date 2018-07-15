@@ -17,7 +17,7 @@ login_and_simple_messages_test_() ->
      fun stop/1,
      fun(SetupData) ->
              [
-              login_user(SetupData)
+              login_logout_user(SetupData)
              , login_user_twice(SetupData)
              , user_name_to_user_pid(SetupData)
              , send_message_to_user(SetupData)
@@ -35,9 +35,11 @@ start() ->
 stop(_) ->
     db:stop().
 
-login_user(_) ->
-    {Res, _} = domain:login("jhon", "aaaa"),
-    [?_assertEqual(ok, Res)].
+login_logout_user(_) ->
+    {Res, Pj} = domain:login("jhon", "aaaa"),
+    R2 = domain:logout(Pj),
+    {Res2, _} = domain:login("jhon", "aaaa"),
+    [?_assertEqual(ok, Res),?_assertEqual(ok, R2),?_assertEqual(ok, Res2) ].
 
 login_user_twice(_) ->
     Res = domain:login("jhon", "aaaa"),

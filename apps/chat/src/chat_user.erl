@@ -10,9 +10,7 @@
 -author("Albert Cruz").
 
 %% API
--export([]).
-
--compile(export_all).
+-export([start/0, init/1, terminate/0]).
 
 start() ->
     spawn(chat_user, init, [[]]).

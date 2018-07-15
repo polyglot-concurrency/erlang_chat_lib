@@ -9,10 +9,9 @@
 -module(domain).
 -author("Albert Cruz").
 
-%% API
--export([]).
 
--compile(export_all).
+-export([create_user/2, create_group/2, login/2, logout/1, add_user_to_group/2,
+         send_msg/3, send_msg_to_group/3, get_msgs/1]).
 
 -spec create_user(string(), string()) -> ok | {error, _}.
 create_user(Name, Password) ->
@@ -37,6 +36,10 @@ login(Name, Password) ->
         _ -> R
     end.
 
+-spec logout(pid()) -> ok | {error, _}.
+logout(LogedUserPid) ->
+    db:remove_loged_user(LogedUserPid).
+
 -spec create_group(pid(), string()) -> ok | {error, _}.
 create_group(LogedUserPid, GroupName) ->
     R = db:is_user_pid_loged(LogedUserPid),
@@ -59,6 +62,7 @@ add_user_to_group(LogedUserPid, GroupName) ->
 send_msg(LogedUserPid, To, Msg) ->
     db:send_msg(LogedUserPid, To, Msg).
 
+-spec get_msgs(pid()) -> list() | {error, _}.
 get_msgs(LogedUserPid) ->
     R = db:is_user_pid_loged(LogedUserPid),
     case R of
