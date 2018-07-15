@@ -6,12 +6,12 @@
 %%% @end
 %%% Created : 0X. Jul 2018 XX:XX
 %%%------------------------------------------------------------------
--module(domain_test).
+-module(login_and_simple_messages_test).
 -include_lib("eunit/include/eunit.hrl").
 
 -author("Albert Cruz").
 
-login_test_() ->
+login_and_simple_messages_test_() ->
     {setup,
      fun start/0,
      fun stop/1,

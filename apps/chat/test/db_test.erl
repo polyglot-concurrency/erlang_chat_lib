@@ -50,4 +50,4 @@ geting_user(_) ->
 
 register_one_user_twice(_) ->
     Res = db:add_user("jhon", "pass2"),
-    [?_assertEqual({error, user_exists}, Res)].
+    [?_assertEqual({error, user_exist}, Res)].

@@ -12,7 +12,9 @@
 -author("Albert Cruz").
 
 -record(models,
-        {users = #{}, current_loged_users = #{}, groups, messages_not_delivered}).
+        {users = #{}, current_loged_users = #{},
+         groups = #{}, messages_not_delivered}
+       ).
 
 
 %% API
@@ -35,6 +37,11 @@ stop() ->
 add_user(Name, Pass) ->
     gen_server:call(?MODULE, {{add_user, Name, Pass}, self()}).
 
+add_group(GroupName, UserName) ->
+    gen_server:call(?MODULE, {{add_group, GroupName, UserName}, self()}).
+
+add_user_to_group(GroupName, UserName) ->
+    gen_server:call(?MODULE, {{add_user_to_group, GroupName, UserName}, self()}).
 
 add_loged_user(Name, UserPid) ->
     gen_server:call(?MODULE, {{add_loged_user, Name, UserPid}, self()}).
@@ -53,6 +60,13 @@ is_user_loged(Name) ->
     {ok, All} = db:pget_loged_users(),
     lists:member(Name, All).
 
+is_user_loged(Name, Models) ->
+    All =pget_loged_users_(Models),
+    lists:member(Name, All).
+
+is_user_pid_loged(UserPid) ->
+    gen_server:call(?MODULE, {{is_user_pid_loged, UserPid}, self()}).
+
 user_name_to_user_pid(Name) ->
     gen_server:call(?MODULE, {{user_name_to_user_pid, Name}, self()}).
 
@@ -63,14 +77,35 @@ get_msgs(LogedUserPid) ->
     gen_server:call(?MODULE, {{get_msgs, LogedUserPid}, self()}).
 
 -spec send_msg(pid(), string(), string()) -> ok | {error, _}.
-send_msg(User, To, Msg) ->
-    gen_server:cast(?MODULE, {send_msg, User, To, Msg}).
+send_msg(LogedUserPid, To, Msg) ->
+    gen_server:cast(?MODULE, {send_msg, LogedUserPid, To, Msg}).
+
+send_msg_to_group(LogedUserPid, GroupName, Msg) ->
+
+    gen_server:cast(?MODULE, {send_msg_to_group, LogedUserPid, GroupName, Msg}).
 
 handle_call({{add_user, Name, Pass}, Pid}, _From, Models) ->
     T = Models#models.users,
     case maps:is_key(Name, T) of
-        true -> {reply, {error, user_exists}, Models};
+        true -> {reply, {error, user_exist}, Models};
         false -> {reply, ok, Models#models{users = T#{Name => Pass}}}
+    end;
+
+handle_call({{add_group, GroupName, UserName}, Pid}, _From, Models) ->
+    T = Models#models.groups,
+    case maps:is_key(GroupName, T) of
+        true -> {reply, {error, group_exist}, Models};
+        false -> {reply, ok, Models#models{groups = T#{GroupName => [UserName]}}}
+    end;
+
+handle_call({{add_user_to_group, GroupName, UserName}, Pid}, _From, Models) ->
+    T = Models#models.groups,
+    case maps:is_key(GroupName, T) of
+        true ->
+            {reply, ok, Models#models{groups = T#{GroupName => [UserName | maps:get(GroupName, T)]}}};
+        false ->
+            {reply, {error, group_do_not_exist}, Models}
+
     end;
 
 handle_call({{add_loged_user, Name, UserPid}, Pid}, _From, Models) ->
@@ -81,9 +116,7 @@ handle_call({{add_loged_user, Name, UserPid}, Pid}, _From, Models) ->
     end;
 
 handle_call({pget_loged_users, Pid}, _From, Models) ->
-    T = Models#models.current_loged_users,
-    E = maps:to_list(T),
-    {reply, {ok, lists:map(fun({Name, _}) -> Name end, E)}, Models};
+    {reply, {ok, pget_loged_users_(Models)}, Models};
 
 handle_call({{get_loged_users, LogedUserPid}, Pid}, _From, Models) ->
     T = Models#models.current_loged_users,
@@ -117,33 +150,72 @@ handle_call({{get_msgs, LogedUserPid}, Pid}, _From, Models) ->
                      Response -> Response
                  end}, Models};
 
+handle_call({{is_user_pid_loged, UserPid}, Pid}, _From, Models) ->
+    R = user_pid_to_user_name_(UserPid, Models),
+    case R of
+        {ok, _} -> {reply, ok, Models};
+        E -> {reply, E, Models}
+    end;
+
 handle_call({{user_name_to_user_pid, Name}, Pid}, _From, Models) ->
     {reply, user_name_to_user_pid_(Name, Models), Models}.
 
 %% Utility functions
 
-user_pid_to_user_name_(LogedUserPid, Models)->
+user_pid_to_user_name_(LogedUserPid, Models) ->
     T = Models#models.current_loged_users,
     E = maps:to_list(T),
     R = lists:keyfind(LogedUserPid, 2, E),
     case R of
-        false ->  {error, user_is_not_loged};
-        {Name, _} ->  {ok, Name}
+        false -> {error, user_is_not_loged};
+        {Name, _} -> {ok, Name}
     end.
 
-user_name_to_user_pid_(Name, Models)->
+user_name_to_user_pid_(Name, Models) ->
     T = Models#models.current_loged_users,
     Res = maps:get(Name, T, default),
     case Res of
-        default ->  {error, user_is_not_loged};
-        Key ->  {ok, Key}
+        default ->
+
+            {error, user_is_not_loged};
+        Key -> {ok, Key}
     end.
+
+pget_loged_users_(Models)->
+    T = Models#models.current_loged_users,
+    E = maps:to_list(T),
+    lists:map(fun({Name, _}) -> Name end, E).
 
 handle_cast({send_msg, UserPid, ToName, Msg}, Models) ->
     %% TODO: proper validation
     {ok, To} = user_name_to_user_pid_(ToName, Models),
     {ok, UserName} = user_pid_to_user_name_(UserPid, Models),
     To ! {msg_from_user, Msg, UserName},
+    {noreply, Models};
+
+handle_cast({send_msg_to_group, UserPid, GroupName, Msg}, Models) ->
+    T = Models#models.groups,
+    case maps:is_key(GroupName, T) of
+        true ->
+
+            Users = maps:get(GroupName, T),
+
+            {ActiveUsers, InActiveUsers} = lists:splitwith(fun(N)-> is_user_loged(N, Models) end, Users),
+
+            UsersPids = lists:map(fun(UName) ->
+                                          {ok, To} = user_name_to_user_pid_(UName, Models),
+                                          To end, ActiveUsers),
+
+            {ok, UserName} = user_pid_to_user_name_(UserPid, Models),
+
+            lists:foreach(fun(To) ->
+
+                                  %% TODO: do not send the message to UserPid
+                                  To ! {msg_from_user, Msg, GroupName ++ ":" ++ UserName}
+
+                          end, UsersPids);
+        false -> ok
+    end,
     {noreply, Models};
 
 handle_cast(stop, LoopData) ->

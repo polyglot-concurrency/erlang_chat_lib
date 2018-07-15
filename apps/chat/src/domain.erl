@@ -38,21 +38,39 @@ login(Name, Password) ->
     end.
 
 -spec create_group(pid(), string()) -> ok | {error, _}.
-create_group(User, GroupName) ->
-    ok.
+create_group(LogedUserPid, GroupName) ->
+    R = db:is_user_pid_loged(LogedUserPid),
+    case R of
+        ok -> {ok, UserName}=db:user_pid_to_user_name(LogedUserPid),
+              db:add_group(GroupName, UserName);
+        E -> E
+    end.
 
 -spec add_user_to_group(pid(), string()) -> ok | {error, _}.
-add_user_to_group(User, GroupName) ->
-    ok.
+add_user_to_group(LogedUserPid, GroupName) ->
+    R = db:is_user_pid_loged(LogedUserPid),
+    case R of
+        ok -> {ok, UserName}=db:user_pid_to_user_name(LogedUserPid),
+              db:add_user_to_group(GroupName, UserName);
+        E -> E
+    end.
 
 -spec send_msg(pid(), string(), string()) -> ok | {error, _}.
-send_msg(User, To, Msg) ->
-    db:send_msg(User, To, Msg).
+send_msg(LogedUserPid, To, Msg) ->
+    db:send_msg(LogedUserPid, To, Msg).
 
-get_msgs(User) ->
-    db:get_msgs(User).
+get_msgs(LogedUserPid) ->
+    R = db:is_user_pid_loged(LogedUserPid),
+    case R of
+        ok -> db:get_msgs(LogedUserPid);
+        E -> E
+    end.
 
 -spec send_msg_to_group(pid(), string(), string()) -> ok | {error, _}.
-send_msg_to_group(User, Group, Msg) ->
-    ok.
+send_msg_to_group(LogedUserPid, GroupName, Msg) ->
+    R = db:is_user_pid_loged(LogedUserPid),
+    case R of
+        ok -> db:send_msg_to_group(LogedUserPid, GroupName, Msg);
+        E -> E
+    end.
 
