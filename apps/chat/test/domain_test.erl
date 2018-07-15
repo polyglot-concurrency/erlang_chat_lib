@@ -19,7 +19,7 @@ login_test_() ->
              [
               login_user(SetupData)
              , login_user_twice(SetupData)
-             , loged_user_pid(SetupData)
+             , user_name_to_user_pid(SetupData)
              , send_message_to_user(SetupData)
 
              ]
@@ -43,9 +43,9 @@ login_user_twice(_) ->
     Res = domain:login("jhon", "aaaa"),
     [?_assertEqual({error, user_already_loged}, Res)].
 
-loged_user_pid(_) ->
-    {ok, P} = db:loged_user_pid("jhon"),
-    Res = db:loged_user_name(P),
+user_name_to_user_pid(_) ->
+    {ok, P} = db:user_name_to_user_pid("jhon"),
+    Res = db:user_pid_to_user_name(P),
     [?_assertEqual({ok, "jhon"}, Res)].
 
 send_message_to_user(_) ->

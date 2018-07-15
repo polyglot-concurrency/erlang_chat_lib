@@ -33,7 +33,7 @@ stop(_) ->
     db:stop().
 
 user_do_not_exists(_) ->
-    Res = db:get_user("jhon", "pass"),
+    Res = db:is_user("jhon", "pass"),
     [?_assertEqual({error, user_do_not_exists}, Res)].
 
 register_one_user(_) ->
@@ -41,11 +41,11 @@ register_one_user(_) ->
     [?_assertEqual(ok, Res)].
 
 wrong_password(_) ->
-    Res = db:get_user("jhon", "pass2"),
+    Res = db:is_user("jhon", "pass2"),
     [?_assertEqual({error, wrong_password}, Res)].
 
 geting_user(_) ->
-    Res = db:get_user("jhon", "pass"),
+    Res = db:is_user("jhon", "pass"),
     [?_assertEqual(ok, Res)].
 
 register_one_user_twice(_) ->

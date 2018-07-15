@@ -20,7 +20,7 @@ create_user(Name, Password) ->
 
 -spec login(string(), string()) -> {ok, pid()} | {error, _}.
 login(Name, Password) ->
-    R = db:get_user(Name, Password),
+    R = db:is_user(Name, Password),
     case R of
         ok ->
             UL = db:is_user_loged(Name),

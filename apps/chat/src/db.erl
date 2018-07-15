@@ -42,22 +42,22 @@ add_loged_user(Name, UserPid) ->
 get_loged_users(LogedUserPid) ->
     gen_server:call(?MODULE, {{get_loged_users, LogedUserPid}, self()}).
 
-get_loged_users() ->
-    gen_server:call(?MODULE, {get_loged_users, self()}).
+pget_loged_users() ->
+    gen_server:call(?MODULE, {pget_loged_users, self()}).
 
--spec get_user(string(), string()) -> ok | {error, _}.
-get_user(Name, Password) ->
-    gen_server:call(?MODULE, {{get_user, Name, Password}, self()}).
+-spec is_user(string(), string()) -> ok | {error, _}.
+is_user(Name, Password) ->
+    gen_server:call(?MODULE, {{is_user, Name, Password}, self()}).
 
 is_user_loged(Name) ->
-    {ok, All} = db:get_loged_users(),
+    {ok, All} = db:pget_loged_users(),
     lists:member(Name, All).
 
-loged_user_pid(Name) ->
-    gen_server:call(?MODULE, {{loged_user_pid, Name}, self()}).
+user_name_to_user_pid(Name) ->
+    gen_server:call(?MODULE, {{user_name_to_user_pid, Name}, self()}).
 
-loged_user_name(LogedUserPid) ->
-    gen_server:call(?MODULE, {{loged_user_name, LogedUserPid}, self()}).
+user_pid_to_user_name(LogedUserPid) ->
+    gen_server:call(?MODULE, {{user_pid_to_user_name, LogedUserPid}, self()}).
 
 get_msgs(LogedUserPid) ->
     gen_server:call(?MODULE, {{get_msgs, LogedUserPid}, self()}).
@@ -80,7 +80,7 @@ handle_call({{add_loged_user, Name, UserPid}, Pid}, _From, Models) ->
         false -> {reply, ok, Models#models{current_loged_users = T#{Name => UserPid}}}
     end;
 
-handle_call({get_loged_users, Pid}, _From, Models) ->
+handle_call({pget_loged_users, Pid}, _From, Models) ->
     T = Models#models.current_loged_users,
     E = maps:to_list(T),
     {reply, {ok, lists:map(fun({Name, _}) -> Name end, E)}, Models};
@@ -96,7 +96,7 @@ handle_call({{get_loged_users, LogedUserPid}, Pid}, _From, Models) ->
             {reply, {ok, lists:map(fun({Name, _}) -> Name end, AllUsers)}, Models}
     end;
 
-handle_call({{get_user, Name, Password}, Pid}, _From, Models) ->
+handle_call({{is_user, Name, Password}, Pid}, _From, Models) ->
     T = Models#models.users,
     case maps:is_key(Name, T) of
         true ->
@@ -108,8 +108,8 @@ handle_call({{get_user, Name, Password}, Pid}, _From, Models) ->
         false -> {reply, {error, user_do_not_exists}, Models}
     end;
 
-handle_call({{loged_user_name, LogedUserPid}, Pid}, _From, Models) ->
-    {reply, loged_user_name_(LogedUserPid, Models), Models};
+handle_call({{user_pid_to_user_name, LogedUserPid}, Pid}, _From, Models) ->
+    {reply, user_pid_to_user_name_(LogedUserPid, Models), Models};
 
 handle_call({{get_msgs, LogedUserPid}, Pid}, _From, Models) ->
     LogedUserPid ! {get_messages, self()},
@@ -117,10 +117,12 @@ handle_call({{get_msgs, LogedUserPid}, Pid}, _From, Models) ->
                      Response -> Response
                  end}, Models};
 
-handle_call({{loged_user_pid, Name}, Pid}, _From, Models) ->
-    {reply, loged_user_pid_(Name, Models), Models}.
+handle_call({{user_name_to_user_pid, Name}, Pid}, _From, Models) ->
+    {reply, user_name_to_user_pid_(Name, Models), Models}.
 
-loged_user_name_(LogedUserPid, Models)->
+%% Utility functions
+
+user_pid_to_user_name_(LogedUserPid, Models)->
     T = Models#models.current_loged_users,
     E = maps:to_list(T),
     R = lists:keyfind(LogedUserPid, 2, E),
@@ -129,7 +131,7 @@ loged_user_name_(LogedUserPid, Models)->
         {Name, _} ->  {ok, Name}
     end.
 
-loged_user_pid_(Name, Models)->
+user_name_to_user_pid_(Name, Models)->
     T = Models#models.current_loged_users,
     Res = maps:get(Name, T, default),
     case Res of
@@ -138,14 +140,14 @@ loged_user_pid_(Name, Models)->
     end.
 
 handle_cast({send_msg, UserPid, ToName, Msg}, Models) ->
-    {ok, To} = loged_user_pid_(ToName, Models),
-    {ok, UserName} = loged_user_name_(UserPid, Models),
+    %% TODO: proper validation
+    {ok, To} = user_name_to_user_pid_(ToName, Models),
+    {ok, UserName} = user_pid_to_user_name_(UserPid, Models),
     To ! {msg_from_user, Msg, UserName},
     {noreply, Models};
 
 handle_cast(stop, LoopData) ->
     {stop, normal, LoopData}.
-
 
 terminate(_Reason, _LoopData) ->
     ok.
