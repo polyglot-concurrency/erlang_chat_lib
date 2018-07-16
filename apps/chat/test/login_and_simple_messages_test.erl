@@ -39,7 +39,12 @@ login_logout_user(_) ->
     {Res, Pj} = domain:login("jhon", "aaaa"),
     R2 = domain:logout(Pj),
     {Res2, _} = domain:login("jhon", "aaaa"),
-    [?_assertEqual(ok, Res),?_assertEqual(ok, R2),?_assertEqual(ok, Res2) ].
+    All = domain:get_all_users_names(),
+    [?_assertEqual(ok, Res)
+    ,?_assertEqual(ok, R2)
+    ,?_assertEqual(ok, Res2)
+    ,?_assertEqual(lists:sort(["mike", "ana", "jhon"]), lists:sort(All))
+    ].
 
 login_user_twice(_) ->
     Res = domain:login("jhon", "aaaa"),

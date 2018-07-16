@@ -11,7 +11,7 @@
 
 
 -export([create_user/2, create_group/2, login/2, logout/1, add_user_to_group/2,
-         send_msg/3, send_msg_to_group/3, get_msgs/1]).
+         send_msg/3, send_msg_to_group/3, get_msgs/1, get_all_users_names/0]).
 
 -spec create_user(string(), string()) -> ok | {error, _}.
 create_user(Name, Password) ->
@@ -39,6 +39,10 @@ login(Name, Password) ->
 -spec logout(pid()) -> ok | {error, _}.
 logout(LogedUserPid) ->
     db:remove_loged_user(LogedUserPid).
+
+-spec get_all_users_names() -> list().
+get_all_users_names() ->
+    db:get_all_users_names().
 
 -spec create_group(pid(), string()) -> ok | {error, _}.
 create_group(LogedUserPid, GroupName) ->

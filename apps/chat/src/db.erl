@@ -22,7 +22,7 @@
 -export([start/0, stop/0, send_msg/3, send_msg_to_group/3, add_user/2,
          add_group/2, add_user_to_group/2, get_loged_users/1, add_loged_user/2,
          user_pid_to_user_name/1, user_name_to_user_pid/1, get_msgs/1, is_user/2,
-         is_user_loged/1, is_user_pid_loged/1, remove_loged_user/1]).
+         is_user_loged/1, is_user_pid_loged/1, remove_loged_user/1, get_all_users_names/0]).
 
 start() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -95,12 +95,16 @@ send_msg_to_group(LogedUserPid, GroupName, Msg) ->
 %% Private functions
 -spec pget_loged_users() -> {ok, list()} | {error, _}.
 pget_loged_users() ->
-  gen_server:call(?MODULE, {pget_loged_users, self()}).
+    gen_server:call(?MODULE, {pget_loged_users, self()}).
+
+-spec get_all_users_names() -> list().
+get_all_users_names() ->
+    gen_server:call(?MODULE, {get_all_users_names, self()}).
 
 -spec is_user_loged(string(), #models{}) -> boolean().
 is_user_loged(Name, Models) ->
-  All =pget_loged_users_(Models),
-  lists:member(Name, All).
+    All =pget_loged_users_(Models),
+    lists:member(Name, All).
 
 handle_call({{add_user, Name, Pass}, _Pid}, _From, Models) ->
     T = Models#models.users,
@@ -142,6 +146,11 @@ handle_call({{remove_loged_user, LogedUserPid}, _Pid}, _From, Models) ->
 
 handle_call({pget_loged_users, _Pid}, _From, Models) ->
     {reply, {ok, pget_loged_users_(Models)}, Models};
+
+handle_call({get_all_users_names, _Pid}, _From, Models) ->
+    T = Models#models.users,
+    E = maps:to_list(T),
+    {reply, lists:map(fun({Name, _}) -> Name end, E), Models};
 
 handle_call({{get_loged_users, LogedUserPid}, _Pid}, _From, Models) ->
     T = Models#models.current_loged_users,
