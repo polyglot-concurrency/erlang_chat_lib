@@ -37,9 +37,14 @@ start() ->
     db:add_user_to_group("group2", "jhon"),
     db:add_user_to_group("group2", "will"),
 
+    chat_server:start(),
+    chat_client:start(node()),
+
     Pid.
 
 stop(_) ->
+    chat_server:stop(),
+    chat_client:stop(),
     db:stop().
 
 group_creation(_) ->
@@ -51,22 +56,22 @@ group_creation_twice(_) ->
     [?_assertEqual({error, group_exist}, Res)].
 
 send_message_to_group(_) ->
-    {_, Pana} = domain:login("ana", "bbbb"),
+    {_, Pana} = chat_client:login("ana", "bbbb"),
 
-    {_, Pmike} = domain:login("mike", "cccc"),
-    {_, Pjhon} = domain:login("jhon", "aaaa"),
+    {_, Pmike} = chat_client:login("mike", "cccc"),
+    {_, Pjhon} = chat_client:login("jhon", "aaaa"),
 
-    domain:send_msg_to_group(Pana, "group2", "hello mike"),
-    domain:send_msg_to_group(Pana, "group2", "hello again"),
-    domain:send_msg_to_group(Pjhon, "group2", "hello"),
-    domain:send_msg(Pjhon, "will", "what's up?"),
+    chat_client:send_msg_to_group(Pana, "group2", "hello mike"),
+    chat_client:send_msg_to_group(Pana, "group2", "hello again"),
+    chat_client:send_msg_to_group(Pjhon, "group2", "hello"),
+    chat_client:send_msg(Pjhon, "will", "what's up?"),
 
-    {_, Pwill} = domain:login("will", "dddd"),
+    {_, Pwill} = chat_client:login("will", "dddd"),
 
-    {ok, Msgs} = domain:get_msgs(Pmike),
-    {ok, MsgsPjhon} = domain:get_msgs(Pjhon),
-    {ok, MsgsPana} = domain:get_msgs(Pana),
-    {ok, MsgsPwill} = domain:get_msgs(Pwill),
+    {ok, Msgs} = chat_client:get_msgs(Pmike),
+    {ok, MsgsPjhon} = chat_client:get_msgs(Pjhon),
+    {ok, MsgsPana} = chat_client:get_msgs(Pana),
+    {ok, MsgsPwill} = chat_client:get_msgs(Pwill),
 
     [
      ?_assertEqual([

@@ -143,4 +143,4 @@ its name too), the second is the message text.
 
 == Apply dialyzer
 
-    $ rebar3 dialyzer apps/chat/src/domain.erl apps/chat/src/db.erl
+    $ rebar3 dialyzer apps/chat/src/lib/chat_client.erl apps/chat/src/lib/db.erl apps/chat/src/lib/chat_user.erl apps/chat/src/lib/chat_server.erl

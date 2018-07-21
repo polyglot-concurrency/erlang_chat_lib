@@ -25,10 +25,10 @@
          is_user_loged/1, is_user_pid_loged/1, remove_loged_user/1, get_all_users_names/0]).
 
 start() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, #models{}, []).
 
 init(_Args) ->
-    {ok, #models{}}.
+    {ok, _Args}.
 
 stop() ->
     gen_server:cast(?MODULE, stop).

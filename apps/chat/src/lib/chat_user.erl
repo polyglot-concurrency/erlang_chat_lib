@@ -10,10 +10,10 @@
 -author("Albert Cruz").
 
 %% API
--export([start/0, init/1, terminate/0]).
+-export([start/1, init/1, terminate/0]).
 
-start() ->
-    spawn(chat_user, init, [[]]).
+start(Node) ->
+    spawn(Node, ?MODULE, init, [[]]).
 
 init(Args) ->
     State = Args,

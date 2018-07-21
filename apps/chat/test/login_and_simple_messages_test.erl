@@ -26,20 +26,27 @@ login_and_simple_messages_test_() ->
      end}.
 
 start() ->
+
     {ok, Pid} = db:start(),
     db:add_user("jhon", "aaaa"),
     db:add_user("ana", "bbbb"),
     db:add_user("mike", "cccc"),
+
+    chat_server:start(),
+    chat_client:start(node()),
+
     Pid.
 
 stop(_) ->
+    chat_server:stop(),
+    chat_client:stop(),
     db:stop().
 
 login_logout_user(_) ->
-    {Res, Pj} = domain:login("jhon", "aaaa"),
-    R2 = domain:logout(Pj),
-    {Res2, _} = domain:login("jhon", "aaaa"),
-    All = domain:get_all_users_names(),
+    {Res, Pj} = chat_client:login("jhon", "aaaa"),
+    R2 = chat_client:logout(Pj),
+    {Res2, _} = chat_client:login("jhon", "aaaa"),
+    All = chat_client:get_all_users_names(),
     [?_assertEqual(ok, Res)
     ,?_assertEqual(ok, R2)
     ,?_assertEqual(ok, Res2)
@@ -47,7 +54,7 @@ login_logout_user(_) ->
     ].
 
 login_user_twice(_) ->
-    Res = domain:login("jhon", "aaaa"),
+    Res = chat_client:login("jhon", "aaaa"),
     [?_assertEqual({error, user_already_loged}, Res)].
 
 user_name_to_user_pid(_) ->
@@ -56,11 +63,11 @@ user_name_to_user_pid(_) ->
     [?_assertEqual({ok, "jhon"}, Res)].
 
 send_message_to_user(_) ->
-    {_, Pana} = domain:login("ana", "bbbb"),
-    {_, Pmike} = domain:login("mike", "cccc"),
-    domain:send_msg(Pana, "mike", "hello mike"),
-    domain:send_msg(Pana, "mike", "hello again"),
-    {ok, Msgs} = domain:get_msgs(Pmike),
+    {_, Pana} = chat_client:login("ana", "bbbb"),
+    {_, Pmike} = chat_client:login("mike", "cccc"),
+    chat_client:send_msg(Pana, "mike", "hello mike"),
+    chat_client:send_msg(Pana, "mike", "hello again"),
+    {ok, Msgs} = chat_client:get_msgs(Pmike),
     [?_assertEqual([
                     {"ana", "hello mike"}
                    , {"ana", "hello again"}
