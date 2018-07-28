@@ -27,8 +27,8 @@ stop()->
 loop() ->
     receive
         {login, Name, Password, SenderNode, Sender} ->
-            R = db:is_user(Name, Password),
-            Sender ! case R of
+            IsUser = db:is_user(Name, Password),
+            Sender ! case IsUser of
                          ok ->
                              UL = db:is_user_loged(Name),
                              case UL of
@@ -41,7 +41,7 @@ loop() ->
                                          _ -> Add_loged_user_response
                                      end
                              end;
-                         _ -> R
+                         _ -> IsUser
                      end,
             loop();
 
@@ -58,8 +58,8 @@ loop() ->
             loop();
 
         {create_group, LogedUserPid, GroupName, Sender} ->
-            R = db:is_user_pid_loged(LogedUserPid),
-            Sender ! case R of
+            IsLoged = db:is_user_pid_loged(LogedUserPid),
+            Sender ! case IsLoged of
                          ok -> {ok, UserName}=db:user_pid_to_user_name(LogedUserPid),
                                db:add_group(GroupName, UserName);
                          E -> E
@@ -67,8 +67,8 @@ loop() ->
             loop();
 
         {add_user_to_group, LogedUserPid, GroupName, Sender} ->
-            R = db:is_user_pid_loged(LogedUserPid),
-            Sender ! case R of
+            IsLoged = db:is_user_pid_loged(LogedUserPid),
+            Sender ! case IsLoged of
                          ok -> {ok, UserName}=db:user_pid_to_user_name(LogedUserPid),
                                db:add_user_to_group(GroupName, UserName);
                          E -> E
@@ -80,16 +80,16 @@ loop() ->
             loop();
 
         {get_msgs, LogedUserPid, Sender} ->
-            R = db:is_user_pid_loged(LogedUserPid),
-            Sender ! case R of
+            IsLoged = db:is_user_pid_loged(LogedUserPid),
+            Sender ! case IsLoged of
                          ok -> db:get_msgs(LogedUserPid);
                          E -> E
                      end,
             loop();
 
         {send_msg_to_group, LogedUserPid, GroupName, Msg} ->
-            R = db:is_user_pid_loged(LogedUserPid),
-            case R of
+            IsLoged = db:is_user_pid_loged(LogedUserPid),
+            case IsLoged of
                 ok -> db:send_msg_to_group(LogedUserPid, GroupName, Msg);
                 E -> E
             end,
